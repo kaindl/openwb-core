@@ -13,6 +13,7 @@ from modules.common.fault_state import ComponentInfo, FaultState
 from modules.common.store import get_internal_chargepoint_value_store, get_chargepoint_value_store
 from modules.internal_chargepoint_handler.clients import ClientHandler
 from helpermodules.subdata import SubData
+from helpermodules import timecheck
 from modules.internal_chargepoint_handler.internal_chargepoint_handler_config import InternalChargepoint
 
 log = logging.getLogger(__name__)
@@ -105,8 +106,10 @@ class ChargepointModule(AbstractChargepoint):
                 )
                 plug_state = self.old_plug_state
             else:
-                self.old_plug_state = evse_state.plug_state
                 plug_state = evse_state.plug_state
+                if plug_state and not self.old_plug_state:
+                    plug_time = timecheck.create_timestamp()
+                self.old_plug_state = evse_state.plug_state
 
             chargepoint_state = ChargepointState(
                 power=power,
@@ -117,6 +120,7 @@ class ChargepointModule(AbstractChargepoint):
                 voltages=counter_state.voltages,
                 frequency=counter_state.frequency,
                 plug_state=plug_state,
+                plug_time=plug_time,
                 charge_state=evse_state.charge_state,
                 phases_in_use=phases_in_use,
                 power_factors=counter_state.power_factors,

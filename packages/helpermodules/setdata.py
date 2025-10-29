@@ -557,7 +557,8 @@ class SetData:
               "/get/current_commit" in msg.topic):
             self._validate_value(msg, str)
         elif ("/get/error_timestamp" in msg.topic or
-                "/get/rfid_timestamp" in msg.topic):
+                "/get/rfid_timestamp" in msg.topic or
+                "/get/plug_time" in msg.topic):
             self._validate_value(msg, float)
         elif ("/get/fault_str" in msg.topic or
                 "/get/state_str" in msg.topic or
@@ -1096,6 +1097,8 @@ class SetData:
                 self._validate_value(msg, bool)
             elif "get" in msg.topic:
                 self.process_chargepoint_get_topics(msg)
+            elif "last_tag_timestamp" in msg.topic:
+                self._validate_value(msg, float)
             elif "last_tag" in msg.topic:
                 self._validate_value(msg, str)
             else:

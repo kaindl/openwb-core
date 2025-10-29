@@ -178,6 +178,7 @@ class ChargepointState:
                  currents: List[float],
                  charge_state: bool,
                  plug_state: bool,
+                 plug_time: Optional[float] = None,
                  serial_number: str = "",
                  charging_current: Optional[float] = 0,
                  charging_voltage: Optional[float] = 0,
@@ -208,6 +209,7 @@ class ChargepointState:
         self.phases_in_use = phases_in_use
         self.charge_state = charge_state
         self.plug_state = plug_state
+        self.plug_time = plug_time
         self.rfid = rfid
         self.rfid_timestamp = rfid_timestamp
         if _check_none(power_factors):
