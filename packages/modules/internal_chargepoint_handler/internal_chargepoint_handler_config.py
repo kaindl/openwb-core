@@ -35,8 +35,10 @@ class Get:
     fault_str: str = NO_ERROR
     fault_state: int = 0
     imported: float = 0
+    imported_since_plugin: float = 0
     phases_in_use: int = 0
     plug_state: bool = False
+    plug_time: Optional[str] = None
     power: float = 0
     rfid_timestamp: Optional[str] = None
     rfid: Optional[str] = None

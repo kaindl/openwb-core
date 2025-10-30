@@ -18,6 +18,7 @@ class InternalChargepointValueStore(ValueStore[ChargepointState]):
         pub_to_broker(f"{topic_prefix}/frequency", self.state.frequency, 2)
         pub_to_broker(f"{topic_prefix}/power_factors", self.state.power_factors, 2)
         pub_to_broker(f"{topic_prefix}/imported", self.state.imported, 2)
+        pub_to_broker(f"{topic_prefix}/imported_since_plugin", self.state.imported_since_plugin, 2)
         pub_to_broker(f"{topic_prefix}/exported", self.state.exported, 2)
         pub_to_broker(f"{topic_prefix}/power", self.state.power, 2)
         pub_to_broker(f"{topic_prefix}/powers", self.state.powers, 2)

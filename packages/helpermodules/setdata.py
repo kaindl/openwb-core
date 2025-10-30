@@ -534,6 +534,7 @@ class SetData:
                 "/get/charging_voltage" in msg.topic or
                 "/get/max_charge_power" in msg.topic or
                 "/get/imported" in msg.topic or
+                "/get/imported_since_plugin" in msg.topic or
                 "/get/exported" in msg.topic or
                 "/get/soc_timestamp" in msg.topic):
             self._validate_value(msg, float, [(0, float("inf"))])

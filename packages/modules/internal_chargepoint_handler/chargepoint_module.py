@@ -46,6 +46,7 @@ class ChargepointModule(AbstractChargepoint):
         self.client_error_context.error_timestamp = internal_cp.get.error_timestamp
         self.old_plug_state = False
         self.plug_time = None
+        self.imported_at_plug_time = 0
         self.old_chargepoint_state = ChargepointState(plug_state=False,
                                                       charge_state=False,
                                                       imported=None,
@@ -110,8 +111,10 @@ class ChargepointModule(AbstractChargepoint):
                 plug_state = evse_state.plug_state
                 if plug_state and not self.old_plug_state:
                     self.plug_time = timecheck.create_timestamp()
+                    self.imported_at_plug_time = chargepoint_state.imported
                 elif not plug_state:
                     self.plug_time = None
+                    self.imported_at_plug_time = 0
                 self.old_plug_state = evse_state.plug_state
 
             chargepoint_state = ChargepointState(
@@ -127,6 +130,7 @@ class ChargepointModule(AbstractChargepoint):
                 charge_state=evse_state.charge_state,
                 phases_in_use=phases_in_use,
                 power_factors=counter_state.power_factors,
+                imported_since_plugin=0 if not plug_state else counter_state.imported - self.imported_at_plug_time,
                 rfid=last_tag,
                 evse_current=evse_state.set_current,
                 serial_number=counter_state.serial_number,

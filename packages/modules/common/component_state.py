@@ -183,6 +183,7 @@ class ChargepointState:
                  charging_current: Optional[float] = 0,
                  charging_voltage: Optional[float] = 0,
                  charging_power: Optional[float] = 0,
+                 imported_since_plugin: float = 0,
                  evse_signaling: Optional[str] = None,
                  max_charge_power: Optional[float] = None,
                  max_discharge_power: Optional[float] = None,
@@ -203,6 +204,7 @@ class ChargepointState:
         self.currents, self.powers, self.voltages = _calculate_powers_and_currents(currents, powers, voltages)
         self.frequency = frequency
         self.imported = imported
+        self.imported_since_plugin = imported_since_plugin
         self.exported = exported
         self.power = power
         self.serial_number = serial_number
