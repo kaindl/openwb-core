@@ -4,6 +4,7 @@ import logging
 from threading import Event, Thread
 import time
 from typing import Optional
+
 from helpermodules import timecheck
 from helpermodules import pub
 
@@ -18,7 +19,7 @@ from modules.internal_chargepoint_handler.clients import ClientHandler, client_f
 from modules.internal_chargepoint_handler.pro_plus import ProPlus
 from modules.internal_chargepoint_handler.socket import Socket
 from modules.internal_chargepoint_handler.internal_chargepoint_handler_config import (
-    GlobalHandlerData, InternalChargepoint, InternalChargepointData, RfidData)
+    GlobalHandlerData, InternalChargepoint, InternalChargepointData, RfidData, MappedRfidData)
 log = logging.getLogger(__name__)
 
 try:
@@ -143,6 +144,67 @@ class InternalChargepointHandler:
         GPIO.setup(26, GPIO.OUT)
         GPIO.setup(19, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
+    def assign_rfid(self, internal_chargepoint_data) -> MappedRfidData:
+        mapped_rfid_data = MappedRfidData(
+            last=internal_chargepoint_data["rfid_data"],
+            cp0=RfidData(last_tag=internal_chargepoint_data["cp0"].get.rfid,
+                         last_tag_timestamp=internal_chargepoint_data["cp0"].get.rfid_timestamp),
+            cp1=RfidData(last_tag=internal_chargepoint_data["cp1"].get.rfid,
+                         last_tag_timestamp=internal_chargepoint_data["cp1"].get.rfid_timestamp)
+        )
+        is_duo = self.cp1 is not None
+        rfid_timestamp = internal_chargepoint_data["rfid_data"].last_tag_timestamp
+        plug_state_cp0 = internal_chargepoint_data["cp0"].get.plug_state
+        plug_state_cp1 = internal_chargepoint_data["cp1"].get.plug_state
+        rfid_assigned = False
+        if rfid_timestamp:
+            cp0_charging_started = bool(internal_chargepoint_data["cp0"].get.imported_since_plugin)
+            plug_time_cp0 = internal_chargepoint_data["cp0"].get.plug_time
+            cp0_plugged_in_before_rfid = plug_state_cp0 and plug_time_cp0 and plug_time_cp0 < rfid_timestamp
+            if is_duo:
+                # For Duo RFID must be scanned after plugging in, otherwise we cannot know which CP the tag belongs to
+                cp1_charging_started = bool(internal_chargepoint_data["cp1"].get.imported_since_plugin)
+                plug_time_cp1 = internal_chargepoint_data["cp1"].get.plug_time
+                cp1_plugged_in_before_rfid = plug_state_cp1 and plug_time_cp1 and plug_time_cp1 < rfid_timestamp
+                if cp0_plugged_in_before_rfid and cp1_plugged_in_before_rfid:
+                    # If both CPs are plugged in before the tag is scanned, assign to last plugged in CP
+                    if plug_time_cp0 < plug_time_cp1:
+                        if not cp1_charging_started:
+                            mapped_rfid_data.cp1 = mapped_rfid_data.last
+                            rfid_assigned = True
+                    else:
+                        if not cp0_charging_started:
+                            mapped_rfid_data.cp0 = mapped_rfid_data.last
+                            rfid_assigned = True
+                elif cp0_plugged_in_before_rfid and not cp0_charging_started:
+                    mapped_rfid_data.cp0 = mapped_rfid_data.last
+                    rfid_assigned = True
+                elif cp1_plugged_in_before_rfid and not cp1_charging_started:
+                    mapped_rfid_data.cp1 = mapped_rfid_data.last
+                    rfid_assigned = True
+            else:
+                # For non-Duo the order between plugging in and scanning the tag does not matter, just needs to happen
+                # inside 5 minutes timebox or before charging started
+                if plug_time_cp0:
+                    time_diff = rfid_timestamp - plug_time_cp0
+                    if time_diff < 300 or (cp0_plugged_in_before_rfid and not cp0_charging_started):
+                        mapped_rfid_data.cp0 = mapped_rfid_data.last
+                        rfid_assigned = True
+
+            scanned_in_last_5min = timecheck.check_timestamp(rfid_timestamp, 300)
+            if not scanned_in_last_5min or rfid_assigned:
+                pub.pub_single("openWB/set/isss/ClearRfid", 1)
+                pub.pub_single("openWB/set/internal_chargepoint/last_tag", None)
+                pub.pub_single("openWB/set/internal_chargepoint/last_tag_timestamp", None)
+
+        # Unset on unplugged CPs
+        if not plug_state_cp0:
+            mapped_rfid_data.cp0 = RfidData(last_tag="", last_tag_timestamp=0)
+        if not plug_state_cp1:
+            mapped_rfid_data.cp1 = RfidData(last_tag="", last_tag_timestamp=0)
+
+        return mapped_rfid_data
+
     def loop(self) -> None:
         def _loop():
             while True:
@@ -154,10 +216,11 @@ class InternalChargepointHandler:
                 log.debug(data)
                 log.setLevel(SubData.system_data["system"].data["debug_level"])
                 heartbeat_cp0, heartbeat_cp1 = True, True
+                mapped_rfid_data = self.assign_rfid(data)
                 if self.cp0:
-                    heartbeat_cp0 = self.cp0.update(data["global_data"], data["cp0"].data, data["rfid_data"])
+                    heartbeat_cp0 = self.cp0.update(data["global_data"], data["cp0"].data, mapped_rfid_data.cp0)
                 if self.cp1:
-                    heartbeat_cp1 = self.cp1.update(data["global_data"], data["cp1"].data, data["rfid_data"])
+                    heartbeat_cp1 = self.cp1.update(data["global_data"], data["cp1"].data, mapped_rfid_data.cp1)
                 self.heartbeat = True if heartbeat_cp0 and heartbeat_cp1 else False
                 time.sleep(1.1)
         with SingleComponentUpdateContext(self.fault_state_info_cp0, update_always=False):

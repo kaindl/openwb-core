@@ -59,3 +59,11 @@ class InternalChargepoint:
 @dataclass
 class RfidData:
     last_tag: str = ""
+    last_tag_timestamp: float = 0
+
+
+@dataclass
+class MappedRfidData:
+    last: RfidData
+    cp0: RfidData
+    cp1: RfidData
