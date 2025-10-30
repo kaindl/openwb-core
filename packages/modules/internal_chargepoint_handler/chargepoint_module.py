@@ -45,6 +45,7 @@ class ChargepointModule(AbstractChargepoint):
             hide_exception=True)
         self.client_error_context.error_timestamp = internal_cp.get.error_timestamp
         self.old_plug_state = False
+        self.plug_time = None
         self.old_chargepoint_state = ChargepointState(plug_state=False,
                                                       charge_state=False,
                                                       imported=None,
@@ -108,7 +109,9 @@ class ChargepointModule(AbstractChargepoint):
             else:
                 plug_state = evse_state.plug_state
                 if plug_state and not self.old_plug_state:
-                    plug_time = timecheck.create_timestamp()
+                    self.plug_time = timecheck.create_timestamp()
+                elif not plug_state:
+                    self.plug_time = None
                 self.old_plug_state = evse_state.plug_state
 
             chargepoint_state = ChargepointState(
@@ -120,7 +123,7 @@ class ChargepointModule(AbstractChargepoint):
                 voltages=counter_state.voltages,
                 frequency=counter_state.frequency,
                 plug_state=plug_state,
-                plug_time=plug_time,
+                plug_time=self.plug_time,
                 charge_state=evse_state.charge_state,
                 phases_in_use=phases_in_use,
                 power_factors=counter_state.power_factors,
