@@ -2,7 +2,7 @@ Mit den verschiedenen Identifikations-Möglichkeiten kannst du die openWB grunds
 
 Die Identifikation erfolgt über
 
-* RFID-Tags: Setzt einen eingebauten RFID-Reader voraus. Dieser ist als optionales Zubehör für openWB Pro und openWB series2 erhältlich. Der Tag kann nach oder max. 5 Minuten vor dem Anstecken gescannt werden.
+* RFID-Tags: Setzt einen eingebauten RFID-Reader voraus. Dieser ist als optionales Zubehör für openWB Pro und openWB series2 erhältlich. Der Tag kann nach oder max. 5 Minuten vor dem Anstecken gescannt werden. Sobald der Ladevorgang gestartet ist, wird kein Tag mehr akzeptiert.
 * Eingabe einer ID am Display: Setzt ein eingebautes Display voraus.
 * Fahrzeugerkennung: Setzt eine openWB Pro und ein Fahrzeug, das diese Funktion unterstützt, voraus. (Permalink zur Übersicht im Forum) Zur Identifikation wird die MAC-Adresse des Fahrzeugs verwendet. Hat die Pro auch einen RFID-Reader, hat bei der Fahrzeug-Zuordnung die MAC-Adresse die höhere Priorität. Beim Entsperren wird beides geprüft.
 
