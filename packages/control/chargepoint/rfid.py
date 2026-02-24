@@ -20,7 +20,7 @@ class ChargepointRfidMixin:
         cp2_data = data.data.cp_data[f"cp{cp2_num}"] if cp2_num is not None else None
         # Tag wird diesem LP der Duo zugewiesen oder es ist keine Duo
         if ((cp2_data is not None and
-                # EV am anderen Ladepunkt, am eigenen wurde zuerst angesteckt
+                # EV am anderen Ladepunkt, am eigenen wurde zuletzt angesteckt
              ((cp2_data.data.get.plug_state and self.data.get.plug_state and
                (cp2_data.data.set.plug_time - self.data.set.plug_time) < 0) or
               # kein EV am anderen Duo-Ladepunkt
