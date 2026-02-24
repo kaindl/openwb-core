@@ -18,10 +18,14 @@ from modules.internal_chargepoint_handler.internal_chargepoint_handler_config im
 
 log = logging.getLogger(__name__)
 
+has_gpio = True
+
 try:
     import RPi.GPIO as GPIO
 except ImportError:
+    has_gpio = False
     log.info("failed to import RPi.GPIO! maybe we are not running on a pi")
+    log.warning("AddOn-IO disabled!")
 
 
 class ChargepointModule(AbstractChargepoint):
@@ -153,26 +157,28 @@ class ChargepointModule(AbstractChargepoint):
         return chargepoint_state
 
     def perform_phase_switch(self, phases_to_use: int, duration: int) -> None:
-        gpio_cp, gpio_relay = self._client.get_pins_phase_switch(phases_to_use)
-        with SingleComponentUpdateContext(self.fault_state, update_always=False):
-            self._client.evse_client.set_current(0)
-        time.sleep(1)
-        GPIO.output(gpio_cp, GPIO.HIGH)  # CP off
-        GPIO.output(gpio_relay, GPIO.HIGH)  # 3 on/off
-        time.sleep(duration)
-        GPIO.output(gpio_relay, GPIO.LOW)  # 3 on/off
-        time.sleep(duration)
-        GPIO.output(gpio_cp, GPIO.LOW)  # CP on
-        time.sleep(1)
+        if has_gpio:
+            gpio_cp, gpio_relay = self._client.get_pins_phase_switch(phases_to_use)
+            with SingleComponentUpdateContext(self.fault_state, update_always=False):
+                self._client.evse_client.set_current(0)
+            time.sleep(1)
+            GPIO.output(gpio_cp, GPIO.HIGH)  # CP off
+            GPIO.output(gpio_relay, GPIO.HIGH)  # 3 on/off
+            time.sleep(duration)
+            GPIO.output(gpio_relay, GPIO.LOW)  # 3 on/off
+            time.sleep(duration)
+            GPIO.output(gpio_cp, GPIO.LOW)  # CP on
+            time.sleep(1)
 
     def perform_cp_interruption(self, duration: int) -> None:
-        gpio_cp = self._client.get_pins_cp_interruption()
-        with SingleComponentUpdateContext(self.fault_state, update_always=False):
-            self._client.evse_client.set_current(0)
-        GPIO.setwarnings(False)
-        GPIO.setmode(GPIO.BOARD)
-        GPIO.setup(gpio_cp, GPIO.OUT)
+        if has_gpio:
+            gpio_cp = self._client.get_pins_cp_interruption()
+            with SingleComponentUpdateContext(self.fault_state, update_always=False):
+                self._client.evse_client.set_current(0)
+            GPIO.setwarnings(False)
+            GPIO.setmode(GPIO.BOARD)
+            GPIO.setup(gpio_cp, GPIO.OUT)
 
-        GPIO.output(gpio_cp, GPIO.HIGH)
-        time.sleep(duration)
-        GPIO.output(gpio_cp, GPIO.LOW)
+            GPIO.output(gpio_cp, GPIO.HIGH)
+            time.sleep(duration)
+            GPIO.output(gpio_cp, GPIO.LOW)

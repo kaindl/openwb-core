@@ -14,11 +14,14 @@ from modules.internal_chargepoint_handler.internal_chargepoint_handler_config im
 
 
 log = logging.getLogger(__name__)
+has_gpio = True
 
 try:
     import RPi.GPIO as GPIO
 except ImportError:
+    has_gpio = False
     log.info("failed to import RPi.GPIO! maybe we are not running on a pi")
+    log.warning("AddOn-IO disabled!")
 
 
 class RateLimiter:
@@ -61,7 +64,10 @@ class Socket(ChargepointModule):
     def set_current(self, current: float) -> None:
         with SingleComponentUpdateContext(self.fault_state, update_always=False):
             with self.client_error_context:
-                actor = ActorState(GPIO.input(19))
+                if has_gpio:
+                    actor = ActorState(GPIO.input(19))
+                else:
+                    actor = ActorState.OPENED
 
                 if actor == ActorState.CLOSED:
                     if current == self.set_current_evse:
@@ -74,7 +80,10 @@ class Socket(ChargepointModule):
 
     def get_values(self, phase_switch_cp_active: bool, last_tag: str) -> ChargepointState:
         with self.client_error_context:
-            actor = ActorState(GPIO.input(19))
+            if has_gpio:
+                actor = ActorState(GPIO.input(19))
+            else:
+                actor = ActorState.OPENED
             log.debug("Actor: "+str(actor))
             self.chargepoint_state = super().get_values(phase_switch_cp_active, last_tag)
             self.chargepoint_state.max_evse_current = self.socket_max_current
@@ -96,8 +105,9 @@ class Socket(ChargepointModule):
     # max 10 Versuche innerhalb der letzten 60 Sekunden.
     @RateLimiter(max_calls=10, max_seconds=60)
     def __set_actor(self, open: bool):
-        GPIO.output(23, GPIO.LOW if open else GPIO.HIGH)
-        GPIO.output(26, GPIO.HIGH)
-        time.sleep(1)
-        GPIO.output(26, GPIO.LOW)
-        log.debug("Actor opened" if open else "Actor closed")
+        if has_gpio:
+            GPIO.output(23, GPIO.LOW if open else GPIO.HIGH)
+            GPIO.output(26, GPIO.HIGH)
+            time.sleep(1)
+            GPIO.output(26, GPIO.LOW)
+            log.debug("Actor opened" if open else "Actor closed")

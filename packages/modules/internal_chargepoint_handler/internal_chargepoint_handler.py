@@ -22,10 +22,14 @@ from modules.internal_chargepoint_handler.internal_chargepoint_handler_config im
     GlobalHandlerData, InternalChargepoint, InternalChargepointData, RfidData, MappedRfidData)
 log = logging.getLogger(__name__)
 
+has_gpio = True
+
 try:
     import RPi.GPIO as GPIO
 except ImportError:
+    has_gpio = False
     log.info("failed to import RPi.GPIO! maybe we are not running on a pi")
+    log.warning("AddOn-IO disabled!")
 
 
 class UpdateState:
@@ -131,18 +135,19 @@ class InternalChargepointHandler:
             self.cp1_client_handler = None
 
     def init_gpio(self) -> None:
-        GPIO.setwarnings(False)
-        GPIO.setmode(GPIO.BOARD)
-        GPIO.setup(37, GPIO.OUT)
-        GPIO.setup(13, GPIO.OUT)
-        GPIO.setup(22, GPIO.OUT)
-        GPIO.setup(29, GPIO.OUT)
-        GPIO.setup(11, GPIO.OUT)
-        GPIO.setup(15, GPIO.OUT)
-        # GPIOs for socket
-        GPIO.setup(23, GPIO.OUT)
-        GPIO.setup(26, GPIO.OUT)
-        GPIO.setup(19, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+        if has_gpio:
+            GPIO.setwarnings(False)
+            GPIO.setmode(GPIO.BOARD)
+            GPIO.setup(37, GPIO.OUT)
+            GPIO.setup(13, GPIO.OUT)
+            GPIO.setup(22, GPIO.OUT)
+            GPIO.setup(29, GPIO.OUT)
+            GPIO.setup(11, GPIO.OUT)
+            GPIO.setup(15, GPIO.OUT)
+            # GPIOs for socket
+            GPIO.setup(23, GPIO.OUT)
+            GPIO.setup(26, GPIO.OUT)
+            GPIO.setup(19, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
     def assign_rfid(self, internal_chargepoint_data) -> MappedRfidData:
         mapped_rfid_data = MappedRfidData(
