@@ -49,7 +49,8 @@ class ChargepointValueStoreBroker(ValueStore[ChargepointState]):
         if self.state.phases_in_use:
             pub_to_broker("openWB/set/chargepoint/" + str(self.num) + "/get/phases_in_use", self.state.phases_in_use, 2)
         pub_to_broker("openWB/set/chargepoint/" + str(self.num) + "/get/charge_state", self.state.charge_state, 2)
-        pub_to_broker("openWB/set/chargepoint/" + str(self.num) + "/get/plug_state", self.state.plug_state, 2)
+        if self.state.plug_state is not None:
+            pub_to_broker("openWB/set/chargepoint/" + str(self.num) + "/get/plug_state", self.state.plug_state, 2)
         if self.state.plug_time is not None:
             pub_to_broker("openWB/set/chargepoint/" + str(self.num) + "/get/plug_time", self.state.plug_time)
         pub_to_broker("openWB/set/chargepoint/" + str(self.num) + "/get/rfid", self.state.rfid)

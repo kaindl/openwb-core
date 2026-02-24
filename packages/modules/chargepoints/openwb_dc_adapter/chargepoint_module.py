@@ -48,11 +48,14 @@ class ChargepointModule(AbstractChargepoint):
                 "DC-Laden muss durch den Support freigeschaltet werden. Bitte nehme Kontakt mit dem Support auf.")
         self.efficiency = None
 
-        with SingleComponentUpdateContext(self.fault_state, update_always=False):
-            with self.client_error_context:
-                self.__session.post(
-                    'http://' + self.config.configuration.ip_address + '/connect.php',
-                    data={'heartbeatenabled': '1'})
+        try:
+            self.__session.post(
+                f'http://{self.config.configuration.ip_address}/connect.php',
+                data={'heartbeatenabled': '1'})
+        except Exception:
+            log.exception(
+                f"Verbindung zum Ladepunkt {self.config.id} konnte nicht hergestellt werden. "
+                "Heartbeat konnte nicht aktiviert werden.")
 
     def set_current(self, current: float) -> None:
         if self.client_error_context.error_counter_exceeded():
@@ -119,8 +122,17 @@ class ChargepointModule(AbstractChargepoint):
                         json_rsp["state"] == ChargingStatus.FINISHING.value or
                         json_rsp["state"] == ChargingStatus.UNAVAILABLE_CONN_OBJ.value):
                     raise Exception(f"Ladepunkt nicht verfügbar. Status: {ChargingStatus(json_rsp['state'])}")
-                self.store.set(chargepoint_state)
                 self.client_error_context.reset_error_counter()
+            if self.client_error_context.error_counter_exceeded():
+                chargepoint_state = ChargepointState(plug_state=None,
+                                                     charge_state=False,
+                                                     imported=None,
+                                                     exported=None,
+                                                     currents=[0]*3,
+                                                     phases_in_use=0,
+                                                     power=0)
+
+            self.store.set(chargepoint_state)
 
 
 chargepoint_descriptor = DeviceDescriptor(configuration_factory=OpenWBDcAdapter)

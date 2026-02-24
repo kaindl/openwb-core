@@ -65,7 +65,7 @@ class ChargepointModule(AbstractChargepoint):
         self.current_commit = SubData.system_data["system"].data["current_commit"]
 
         if float(run_command.run_command(["cat", "/proc/uptime"]).split(" ")[0]) < 180:
-            self.perform_phase_switch(1, 4)
+            self.perform_phase_switch(1)
             self.old_phases_in_use = 1
         else:
             def on_connect(client, userdata, flags, rc):
@@ -74,13 +74,13 @@ class ChargepointModule(AbstractChargepoint):
             def on_message(client, userdata, message):
                 self.old_phases_in_use = decode_payload(message.payload)
 
-            self.old_phases_in_use = None
+            self.old_phases_in_use = 1
             BrokerClient(f"subscribeInternalCp{self.local_charge_point_num}",
                          on_connect, on_message).start_finite_loop()
 
     def set_current(self, current: float) -> None:
         with SingleComponentUpdateContext(self.fault_state, update_always=False):
-            self._client.evse_client.set_current(current)
+            self._client.evse_client.set_current(current, phases_in_use=self.old_phases_in_use)
 
     def get_values(self, phase_switch_cp_active: bool, last_tag: str) -> ChargepointState:
         def store_state(chargepoint_state: ChargepointState) -> None:
@@ -144,29 +144,29 @@ class ChargepointModule(AbstractChargepoint):
                 current_commit=self.current_commit
             )
         if self.client_error_context.error_counter_exceeded():
-            chargepoint_state = ChargepointState(plug_state=False,
+            chargepoint_state = ChargepointState(plug_state=self.old_plug_state,
                                                  charge_state=False,
                                                  imported=self.old_chargepoint_state.imported,
                                                  exported=self.old_chargepoint_state.exported,
-                                                 currents=self.old_chargepoint_state.currents,
+                                                 currents=[0]*3,
                                                  phases_in_use=self.old_chargepoint_state.phases_in_use,
-                                                 power=self.old_chargepoint_state.power)
+                                                 power=0)
 
         store_state(chargepoint_state)
         self.old_chargepoint_state = chargepoint_state
         return chargepoint_state
 
-    def perform_phase_switch(self, phases_to_use: int, duration: int) -> None:
+    def perform_phase_switch(self, phases_to_use: int) -> None:
         if has_gpio:
             gpio_cp, gpio_relay = self._client.get_pins_phase_switch(phases_to_use)
             with SingleComponentUpdateContext(self.fault_state, update_always=False):
                 self._client.evse_client.set_current(0)
-            time.sleep(1)
+            time.sleep(5)
             GPIO.output(gpio_cp, GPIO.HIGH)  # CP off
             GPIO.output(gpio_relay, GPIO.HIGH)  # 3 on/off
-            time.sleep(duration)
+            time.sleep(5)
             GPIO.output(gpio_relay, GPIO.LOW)  # 3 on/off
-            time.sleep(duration)
+            time.sleep(5)
             GPIO.output(gpio_cp, GPIO.LOW)  # CP on
             time.sleep(1)
 
